@@ -128,7 +128,47 @@ class KnowledgeBase(object):
         printv("Retracting {!r}", 0, verbose, [fact_or_rule])
         ####################################################
         # Student code goes here
-        
+        if isinstance(fact_or_rule, Fact):
+            for facts in self.facts:
+                if facts == fact_or_rule:
+                    #print("FAC-SUPPORT")
+                    #print(facts.supported_by)
+                    if facts.supported_by == []:
+                        self.facts.remove(fact_or_rule)
+                        for faccts in facts.supports_facts:
+                        #    print("\n\n")
+                        #    print("FACCTS:::::======")
+                        #    print(faccts.statement)
+                        #    print("++++++++++++++++++++++++:sBY:+++++++++++++++++++++++++++++++++++++")
+                        #    print(faccts.supported_by)
+                        #    print("\n")
+                            faccts.supported_by.remove(facts)
+                        #    print("\n\n")
+                        #    print(faccts.supported_by)
+                        #    print("---------------------End-sBy---------------------------")
+
+                            if faccts.supported_by == []:
+                                self.kb_retract(faccts)
+                        for ruless in facts.supports_rules:
+                            ruless.supported_by.remove(facts)
+                            self.kb_retract(ruless)
+
+
+                    ##Need to account for facts and rules no longer supported but possibly asserted
+
+            if isinstance(fact_or_rule, Rule):
+                for rules in self.rules:
+                    if rules == fact_or_rule:
+                        if rules.supported_by == [] and rules.asserted == False:
+                            self.rules.remove(fact_or_rule)
+                            for faccts in rules.supports_facts:
+                                faccts.supported_by.remove(rules)
+                                if faccts.supported_by == []:
+                                    self.kb_retract(faccts)
+                            for ruless in rules.supports_rules:
+                                ruless.supported_by.remove(rules)
+                                self.kb_retract(ruless)
+
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
@@ -140,9 +180,79 @@ class InferenceEngine(object):
             kb (KnowledgeBase) - A KnowledgeBase
 
         Returns:
-            Nothing            
+            Nothing
         """
-        printv('Attempting to infer from {!r} and {!r} => {!r}', 1, verbose,
+        printv('Attempting to infer from {!r} and {!r} => {!r}\n\n', 1, verbose,
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+        binding = match(rule.lhs[0], fact.statement)
+
+
+        if binding:
+            #print("Binding: ", binding)
+            inference = instantiate(rule.rhs, binding)      ###Right hand side of new rule
+            if len(rule.lhs) > 1:
+                #print("RuleLHS[0]:",rule.lhs[0])
+                #print("\nRuleLHS[1]:",rule.lhs[1])
+                #print("\nRuleRHS",rule.rhs)
+
+                #print("\n\n")
+                #print("-----::::::INFErENCE::::::-------")
+                #print(inference)
+
+                #print("\n\n")
+                #print("-------:::::Instantiate w/lhs[1]::::::--------")
+                in22 = instantiate(rule.lhs[1],binding)
+                #print(in22)
+                newRule = Rule([[in22],[inference]],[fact])
+                #print("\n\n")
+                #print("NEW-RULE")
+                #print(newRule.lhs)
+                newRule.lhs = [in22]
+                #print("nrhs")
+                newRule.rhs = inference
+                #print(newRule.rhs)
+                #print(newRule.supported_by)
+                #print("endrule")
+                kb.kb_add(newRule)
+                fact.supports_rules.append(newRule)
+
+                """for facct in kb.facts:
+                    #print("BINDING")
+                    #print(binding)
+                    bind = match(in22, facct.statement)
+                    print("--------------------MATCH RESULT------------------------")
+                    print("RuleLHS[1]:",rule.lhs[1])
+                    print("fact statement:",facct.statement)
+                    if bind:
+                        print("BIND+=")
+                        print(bind)
+                        print(binding)
+                        infbind = instantiate(inference, bind)
+                        nFact = Fact(infbind, supported_by=[facct])
+                        print("====================NFACT DETAILS======================")
+                        print(nFact.supported_by)
+                        rule.supports_facts.append(nFact)
+                        facct.supports_facts.append(nFact)
+                        kb.kb_assert(nFact)
+                        print("INFBIND")
+                        print(infbind)"""
+            else:
+                newFact = Fact(inference, [fact])
+                rule.supports_facts.append(newFact)
+                fact.supports_facts.append(newFact)
+                kb.kb_assert(newFact)
+
+            #print(binding)
+            #print("INF:",inference)
+
+
+        """    for fs in kb.facts:
+                print(fs.statement)
+                #print("<Supported by>")
+                #print(fs.supported_by)
+            for rs in kb.rules:
+                print("RULES",rs.lhs)
+                print(rs.rhs)
+            print("\n\n")"""
